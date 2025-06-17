@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Viewer with Coordinates</title>
+  <title>Sign Location helper</title>
   <style>
+      * {
+          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      }
       body {
           margin: 0;
           padding: 0;
@@ -13,7 +16,7 @@
       }
 
       .left-panel {
-          width: 200px;
+          width: 300px;
           padding: 20px;
           background-color: #f0f0f0;
           border-right: 1px solid #ccc;
@@ -43,31 +46,10 @@
           display: inline-block;
       }
 
-      .page-number {
-          position: absolute;
-          left: 50%;
-          transform: translateX(-50%);
-          background: rgba(0, 0, 0, 0.7);
-          color: white;
-          padding: 2px 8px;
-          border-radius: 3px;
-          font-size: 12px;
-      }
-
-      #coordinates-display {
-          position: fixed;
-          bottom: 10px;
-          right: 10px;
-          background: rgba(0, 0, 0, 0.7);
-          color: white;
-          padding: 5px 10px;
-          border-radius: 3px;
-          font-family: monospace;
-      }
-
       .pdf-canvas {
           border: 1px solid #000;
           box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          box-sizing: border-box;
       }
 
       .signature-overlay {
@@ -77,6 +59,7 @@
           display: none;
           border: 1px solid rgba(255, 0, 0, 0.5);
           transition: background-color 0.5s ease;
+          box-sizing: border-box;
       }
 
       .box-container {
@@ -85,9 +68,6 @@
           user-select: none;
           pointer-events: auto;
           bottom: auto;
-      }
-
-      .pdf-canvas, .signature-overlay, .box-container {
           box-sizing: border-box;
       }
   </style>
@@ -97,11 +77,25 @@
   <h2>Sign Location Helper</h2>
   <h3>Upload PDF</h3>
   <input type="file" id="file-input" accept=".pdf" />
+
+  <h3>How to Use</h3>
+  <ol>
+    <li>Select and upload your PDF document</li>
+    <li>Hover over the document to preview signature placement</li>
+    <li>Click to place the signature box, then drag to adjust position</li>
+    <li>Double-click on the signature box to copy the coordinates</li>
+  </ol>
+
+  <h3>Security Notice</h3>
+  <ul>
+    <li>All document processing occurs locally in your browser - no data is uploaded to external servers</li>
+    <li>This tool is provided as-is without any support or warranties</li>
+  </ul>
+
 </div>
 
 <div class="right-panel">
   <div id="pdf-container"></div>
-  <div id="coordinates-display">x: 0.000, y: 0.000, page: 1</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -132,51 +126,51 @@
     document.addEventListener('mouseup', dragEnd);
 
     function dragStart(e) {
-        if (e.target === boxContainer) {
-            const rect = boxContainer.getBoundingClientRect();
-            initialX = e.clientX - rect.left;
-            initialY = e.clientY - rect.top;
-            isDragging = true;
-        }
+      if (e.target === boxContainer) {
+        const rect = boxContainer.getBoundingClientRect();
+        initialX = e.clientX - rect.left;
+        initialY = e.clientY - rect.top;
+        isDragging = true;
+      }
     }
 
     function drag(e) {
-        if (!isDragging) return;
+      if (!isDragging) return;
 
-        e.preventDefault();
+      e.preventDefault();
 
-        const canvasRect = pageContainer.querySelector('canvas').getBoundingClientRect();
-        currentX = e.clientX - canvasRect.left - initialX;
-        currentY = e.clientY - canvasRect.top - initialY;
+      const canvasRect = pageContainer.querySelector('canvas').getBoundingClientRect();
+      currentX = e.clientX - canvasRect.left - initialX;
+      currentY = e.clientY - canvasRect.top - initialY;
 
-        // Add border margin to constraints
-        const maxX = canvasRect.width - boxContainer.offsetWidth - BORDER_MARGIN;
-        const maxY = canvasRect.height - boxContainer.offsetHeight - BORDER_MARGIN;
-        const minX = BORDER_MARGIN;
-        const minY = BORDER_MARGIN;
+      // Add border margin to constraints
+      const maxX = canvasRect.width - boxContainer.offsetWidth - BORDER_MARGIN;
+      const maxY = canvasRect.height - boxContainer.offsetHeight - BORDER_MARGIN;
+      const minX = BORDER_MARGIN;
+      const minY = BORDER_MARGIN;
 
-        // Constrain the movement within the borders
-        currentX = Math.min(Math.max(minX, currentX), maxX);
-        currentY = Math.min(Math.max(minY, currentY), maxY);
+      // Constrain the movement within the borders
+      currentX = Math.min(Math.max(minX, currentX), maxX);
+      currentY = Math.min(Math.max(minY, currentY), maxY);
 
-        boxContainer.style.left = currentX + 'px';
-        boxContainer.style.top = currentY + 'px';
+      boxContainer.style.left = currentX + 'px';
+      boxContainer.style.top = currentY + 'px';
 
-        // Calculate normalized coordinates
-        const normalizedX = Math.floor((currentX / canvasRect.width) * 10000) / 10000;
-        const normalizedY = Math.floor((1 - ((currentY + boxContainer.offsetHeight) / canvasRect.height)) * 10000) / 10000;
+      // Calculate normalized coordinates
+      const normalizedX = Math.floor((currentX / canvasRect.width) * 10000) / 10000;
+      const normalizedY = Math.floor((1 - ((currentY + boxContainer.offsetHeight) / canvasRect.height)) * 10000) / 10000;
 
-        const coordsText = boxContainer.querySelector('div > div');
-        if (coordsText) {
-            const pageNum = pageContainer.dataset.pageNumber;
-            coordsText.textContent = `x: ${normalizedX}, y: ${normalizedY}, page: ${pageNum}`;
-        }
+      const coordsText = boxContainer.querySelector('div > div');
+      if (coordsText) {
+        const pageNum = pageContainer.dataset.pageNumber;
+        coordsText.textContent = `x: ${normalizedX}, y: ${normalizedY}, page: ${pageNum}`;
+      }
     }
 
     function dragEnd() {
-        isDragging = false;
+      isDragging = false;
     }
-}
+  }
 
   function renderPage(pageNum) {
     return pdfDoc.getPage(pageNum).then(function(page) {
@@ -201,35 +195,30 @@
       const overlay = document.createElement('div');
       overlay.className = 'signature-overlay';
 
-      const pageNumberLabel = document.createElement('div');
-      pageNumberLabel.className = 'page-number';
-      pageNumberLabel.textContent = `Page ${pageNum}`;
-
       pageContainer.appendChild(canvas);
       pageContainer.appendChild(overlay);
-      pageContainer.appendChild(pageNumberLabel);
       document.getElementById('pdf-container').appendChild(pageContainer);
 
       canvas.addEventListener('mousemove', function(e) {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-    const signatureWidthPx = SIGNATURE_WIDTH * currentScale;
-    const signatureHeightPx = SIGNATURE_HEIGHT * currentScale;
-    const BORDER_MARGIN = 5;
+        const signatureWidthPx = SIGNATURE_WIDTH * currentScale;
+        const signatureHeightPx = SIGNATURE_HEIGHT * currentScale;
+        const BORDER_MARGIN = 5;
 
-    const isOutOfBounds =
-        x + signatureWidthPx > rect.width - BORDER_MARGIN ||
-        x < BORDER_MARGIN ||
-        y < signatureHeightPx + BORDER_MARGIN ||
-        y > rect.height - BORDER_MARGIN;
+        const isOutOfBounds =
+          x + signatureWidthPx > rect.width - BORDER_MARGIN ||
+          x < BORDER_MARGIN ||
+          y < signatureHeightPx + BORDER_MARGIN ||
+          y > rect.height - BORDER_MARGIN;
 
-    if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-        if (isOutOfBounds) {
+        if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+          if (isOutOfBounds) {
             overlay.style.display = 'none';
             canvas.style.cursor = 'not-allowed';
-        } else {
+          } else {
             overlay.style.display = 'block';
             canvas.style.cursor = 'default';
 
@@ -238,14 +227,10 @@
             overlay.style.left = x + 'px';
             overlay.style.top = (y - signatureHeightPx) + 'px';
 
-            const normalizedX = Math.floor((x / rect.width) * 10000) / 10000;
-            const normalizedY = Math.floor(((rect.height - y) / rect.height) * 10000) / 10000;
 
-            document.getElementById('coordinates-display').textContent =
-                `x: ${normalizedX}, y: ${normalizedY}, page: ${pageNum}`;
+          }
         }
-    }
-});
+      });
 
       canvas.addEventListener('mouseleave', function() {
         overlay.style.display = 'none';
@@ -253,31 +238,31 @@
       });
 
       canvas.addEventListener('click', function(e) {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-    const signatureWidthPx = SIGNATURE_WIDTH * currentScale;
-    const signatureHeightPx = SIGNATURE_HEIGHT * currentScale;
-    const BORDER_MARGIN = 5; // 5 points border margin
+        const signatureWidthPx = SIGNATURE_WIDTH * currentScale;
+        const signatureHeightPx = SIGNATURE_HEIGHT * currentScale;
+        const BORDER_MARGIN = 5; // 5 points border margin
 
-    const isOutOfBounds =
-        x + signatureWidthPx > rect.width - BORDER_MARGIN || // Right border
-        x < BORDER_MARGIN || // Left border
-        y < signatureHeightPx + BORDER_MARGIN || // Top border
-        y > rect.height - BORDER_MARGIN; // Bottom border
+        const isOutOfBounds =
+          x + signatureWidthPx > rect.width - BORDER_MARGIN || // Right border
+          x < BORDER_MARGIN || // Left border
+          y < signatureHeightPx + BORDER_MARGIN || // Top border
+          y > rect.height - BORDER_MARGIN; // Bottom border
 
-    if (!isOutOfBounds && x >= BORDER_MARGIN && x <= rect.width - BORDER_MARGIN && 
-        y >= BORDER_MARGIN && y <= rect.height - BORDER_MARGIN) {
-        if (currentBox) {
+        if (!isOutOfBounds && x >= BORDER_MARGIN && x <= rect.width - BORDER_MARGIN &&
+          y >= BORDER_MARGIN && y <= rect.height - BORDER_MARGIN) {
+          if (currentBox) {
             currentBox.remove();
-        }
+          }
 
-        // Rest of the existing click handler code...
-        const normalizedX = Math.floor((x / rect.width) * 10000) / 10000;
-        const normalizedY = Math.floor((1 - ((y + signatureHeightPx) / rect.height)) * 10000) / 10000;
+          // Rest of the existing click handler code...
+          const normalizedX = Math.floor((x / rect.width) * 10000) / 10000;
+          const normalizedY = Math.floor((1 - ((y + signatureHeightPx) / rect.height)) * 10000) / 10000;
 
-        const boxContainer = document.createElement('div');
+          const boxContainer = document.createElement('div');
           boxContainer.className = 'box-container';
           boxContainer.style.position = 'absolute';
           // In the click handler, update the positioning:
@@ -299,8 +284,6 @@
 
           const coordsText = document.createElement('div');
           coordsText.style.color = 'black';
-          coordsText.style.fontSize = '12px';
-          coordsText.style.fontFamily = 'monospace';
           coordsText.style.pointerEvents = 'none';
           coordsText.textContent = `x: ${normalizedX}, y: ${normalizedY}, page: ${pageNum}`;
 
@@ -310,6 +293,14 @@
 
           currentBox = boxContainer;
           makeBoxDraggable(boxContainer, pageContainer);
+
+          // Add this to the box creation code where we set up the boxContainer:
+          boxContainer.addEventListener('dblclick', function() {
+            const coordsText = this.querySelector('div > div');
+            if (coordsText) {
+              copyToClipboard(coordsText.textContent);
+            }
+          });
         }
       });
 
@@ -365,6 +356,18 @@
       Promise.all(pagePromises);
     }
   });
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      // Optional: Show a brief visual feedback that copying succeeded
+      const coordsText = currentBox.querySelector('div > div');
+      const originalText = coordsText.textContent;
+      coordsText.textContent = 'Copied!';
+      setTimeout(() => {
+        coordsText.textContent = originalText;
+      }, 1000);
+    });
+  }
 </script>
 </body>
 </html>
