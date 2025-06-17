@@ -1,5 +1,6 @@
 # Sign Location Helper
 This is a fully client-side tool to assist in determining signature box coordinates in a PDF document for digital signing workflows (Sign with Singpass v3).
+
 ![User Manual](manual.gif)
 
 
